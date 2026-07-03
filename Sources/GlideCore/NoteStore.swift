@@ -34,4 +34,13 @@ public struct NoteStore{
             .filter {$0.pathExtension == "md"}
             .map { $0.deletingPathExtension().lastPathComponent}
     }
+    
+    public func createDefaultNotesIfNeeded() throws {
+        for note in DefaultNote.allCases{
+            let url = directory.appendingPathComponent("\(note.rawValue).md")
+            if !FileManager.default.fileExists(atPath: url.path){
+                try write("", to: note.rawValue)
+            }
+        }
+    }
 }
