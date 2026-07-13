@@ -43,4 +43,11 @@ public struct NoteStore{
             }
         }
     }
+    
+    public static func makeDefault() throws -> NoteStore {
+        let documents = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let glideFolder = documents.appendingPathComponent("Glide", isDirectory: true)
+        try FileManager.default.createDirectory(atPath: glideFolder.path, withIntermediateDirectories: true)
+        return NoteStore(directory: glideFolder)
+    }
 }
