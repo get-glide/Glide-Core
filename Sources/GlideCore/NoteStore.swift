@@ -50,4 +50,20 @@ public struct NoteStore{
         try FileManager.default.createDirectory(atPath: glideFolder.path, withIntermediateDirectories: true)
         return NoteStore(directory: glideFolder)
     }
+    
+    public func search(_ query: String) throws -> [SearchResult] {
+        var results: [SearchResult] = []
+        
+        for name in try listNotes(){
+            let contents = try read(name)
+            let lines = contents.split(separator: "\n")
+            
+            for line in lines{
+                if line.lowercased().contains(query.lowercased()){
+                    results.append(SearchResult(noteName: name, line: String(line)))
+                }
+            }
+        }
+        return results
+    }
 }
