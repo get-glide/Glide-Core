@@ -46,3 +46,18 @@ import Foundation
     // 3. check: two lines match "milk", case-insensitive
     #expect(results.count == 2)
 }
+
+@Test func togglesTaskCompletion() throws {
+    // unchecked → checked: gets [x] and a done stamp
+    let checked = toggleTaskCompletion("[ ] buy milk")
+    #expect(checked.hasPrefix("[x] buy milk"))
+    #expect(checked.contains("(done:"))
+    
+    // checked → unchecked: back to [ ], stamp stripped
+    let unchecked = toggleTaskCompletion("[x] buy milk (done: 2026-07-28)")
+    #expect(unchecked == "[ ] buy milk")
+    
+    // non-task line: unchanged
+    let plain = toggleTaskCompletion("just a note")
+    #expect(plain == "just a note")
+}
