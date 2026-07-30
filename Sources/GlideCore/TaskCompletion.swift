@@ -32,3 +32,4 @@ public func toggleTaskCompletion(_ line: String) -> String {
         return line
     }
 }
+
