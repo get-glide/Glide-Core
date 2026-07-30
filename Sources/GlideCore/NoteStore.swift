@@ -66,4 +66,18 @@ public struct NoteStore{
         }
         return results
     }
+    
+    public func runDailyRollover() throws{
+        let todayText = try read(DefaultNote.today.rawValue)
+        let result = sweepCompletedTasks(from: todayText)
+        
+        try write(result.kept, to: DefaultNote.today.rawValue)
+        
+        if !result.archived.isEmpty{
+            let existing = (try? read("Completed Tasks")) ?? ""
+            let newLines = result.archived.joined(separator: "\n")
+            let combined = existing.isEmpty ? newLines : existing + "\n" + newLines
+            try write(combined, to: "Completed Tasks")
+        }
+    }
 }

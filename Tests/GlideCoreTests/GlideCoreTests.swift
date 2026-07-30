@@ -61,3 +61,42 @@ import Foundation
     let plain = toggleTaskCompletion("just a note")
     #expect(plain == "just a note")
 }
+
+@Test func sweepSeparatesCompletedTasks() throws {
+    let note = """
+    [ ] buy milk
+    [x] finish essay (done: 2026-07-28)
+    some note text
+    [x] email professor (done: 2026-07-28)
+    """
+    
+    let result = sweepCompletedTasks(from: note)
+    
+    // two completed tasks archived
+    #expect(result.archived.count == 2)
+    
+    // kept text has the incomplete task and the note, but not the completed ones
+    #expect(result.kept.contains("[ ] buy milk"))
+    #expect(result.kept.contains("some note text"))
+    #expect(!result.kept.contains("[x]"))
+}
+
+@Test func rolloverMovesCompletedTasks() throws {
+    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    let store = NoteStore(directory: tempDir)
+    
+    // Today has one done, one not
+    try store.write("[ ] buy milk\n[x] finish essay (done: 2026-07-28)", to: DefaultNote.today.rawValue)
+    
+    try store.runDailyRollover()
+    
+    // Today keeps only the incomplete task
+    let today = try store.read(DefaultNote.today.rawValue)
+    #expect(today.contains("[ ] buy milk"))
+    #expect(!today.contains("[x]"))
+    
+    // Completed Tasks got the finished one
+    let completed = try store.read(DefaultNote.completed.rawValue)
+    #expect(completed.contains("[x] finish essay"))
+}
