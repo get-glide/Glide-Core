@@ -61,3 +61,22 @@ import Foundation
     let plain = toggleTaskCompletion("just a note")
     #expect(plain == "just a note")
 }
+
+@Test func sweepSeparatesCompletedTasks() throws {
+    let note = """
+    [ ] buy milk
+    [x] finish essay (done: 2026-07-28)
+    some note text
+    [x] email professor (done: 2026-07-28)
+    """
+    
+    let result = sweepCompletedTasks(from: note)
+    
+    // two completed tasks archived
+    #expect(result.archived.count == 2)
+    
+    // kept text has the incomplete task and the note, but not the completed ones
+    #expect(result.kept.contains("[ ] buy milk"))
+    #expect(result.kept.contains("some note text"))
+    #expect(!result.kept.contains("[x]"))
+}
