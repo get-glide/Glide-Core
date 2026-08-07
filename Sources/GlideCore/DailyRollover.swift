@@ -27,3 +27,9 @@ public func sweepCompletedTasks(from noteText: String) -> (kept: String, archive
     let kept = keptLines.joined(separator: "\n")
     return (kept, archivedLines)
 }
+
+public func shouldRunRollover(lastActive: Date?, today: Date = Date()) -> Bool{
+    guard let lastActive else { return false }
+    let calendar = Calendar.current
+    return !calendar.isDate(lastActive, inSameDayAs: today)
+}
