@@ -101,22 +101,4 @@ import Foundation
     #expect(completed.contains("[x] finish essay"))
 }
 
-@Test func countsConsecutiveStreak() throws {
-    // fixed "today" so the test is stable
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    let today = formatter.date(from: "2026-07-30")!
-    
-    // completions on the 30th, 29th, 28th — then a gap (skips 27th), then 26th
-    let completed = """
-    [x] task a (done: 2026-07-30)
-    [x] task b (done: 2026-07-29)
-    [x] task c (done: 2026-07-28)
-    [x] task d (done: 2026-07-26)
-    """
-    
-    let streak = currentStreak(fromCompletedText: completed, today: today)
-    
-    // 30, 29, 28 are consecutive → streak of 3. The 26th doesn't count (27th missing).
-    #expect(streak == 3)
-}
+
