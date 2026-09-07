@@ -42,15 +42,17 @@ private func parseCheckbox(line: String) -> (checked: Bool, remainder: String)? 
     return nil
 }
 
-private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried: Bool, createdDate: Date?, remainder: String) {
+private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried: Bool, createdDate: Date?, dueDate: Date?, remainder: String) {
     let recurrenceRegex = /\s*@(daily|weekly|weekday|monthly|mon|tue|wed|thu|fri|sat|sun)\b/.ignoresCase()
     let carriedRegex = /\s*@carried\b/.ignoresCase()
+    let dueDateRegex = /\s*@due\((\d{4}-\d{2}-\d{2})\)/.ignoresCase()
     let createdDateRegex = /\s*@created\((\d{4}-\d{2}-\d{2})\)/.ignoresCase()
     
     var remainder = line
     var recurrence: Recurrence = .none
     var isCarried = false
     var createdDate: Date? = nil
+    var dueDate: Date? = nil
     
     if let match = remainder.firstMatch(of: carriedRegex) {
         isCarried = true
@@ -88,7 +90,15 @@ private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried
         remainder = remainder.replacingCharacters(in: match.range, with: "").trimmingCharacters(in: .whitespaces)
     }
     
-    return (recurrence, isCarried, createdDate, remainder)
+    if let match = remainder.firstMatch(of: dueDateRegex) {
+        let dateString = String(match.1)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        dueDate = formatter.date(from: dateString)
+        remainder = remainder.replacingCharacters(in: match.range, with: "").trimmingCharacters(in: .whitespaces)
+    }
+    
+    return (recurrence, isCarried, createdDate, dueDate, remainder)
 }
 
 public func parseLine(_ line: String) -> ParsedLine {
@@ -107,21 +117,21 @@ public func parseLine(_ line: String) -> ParsedLine {
     
     if let (taskTime, timeRemainder) = parseTime(line: remainder) {
         if let (checked, checkboxRemainder) = parseCheckbox(line: timeRemainder) {
-            let (recurrence, isCarried, createdDate, taskText) = parseRecurrence(line: checkboxRemainder)
-            return .task(TaskLine(text: taskText, time: taskTime, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, headingLevel: headingLevel))
+            let (recurrence, isCarried, createdDate, dueDate, taskText) = parseRecurrence(line: checkboxRemainder)
+            return .task(TaskLine(text: taskText, time: taskTime, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, headingLevel: headingLevel))
         } else {
-            let (recurrence, isCarried, createdDate, taskText) = parseRecurrence(line: timeRemainder)
-            return .task(TaskLine(text: taskText, time: taskTime, checked: false, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, headingLevel: headingLevel))
+            let (recurrence, isCarried, createdDate, dueDate, taskText) = parseRecurrence(line: timeRemainder)
+            return .task(TaskLine(text: taskText, time: taskTime, checked: false, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, headingLevel: headingLevel))
         }
     }
     
     if let (checked, checkboxRemainder) = parseCheckbox(line: remainder) {
         if let (taskTime, timeRemainder) = parseTime(line: checkboxRemainder) {
-            let (recurrence, isCarried, createdDate, taskText) = parseRecurrence(line: timeRemainder)
-            return .task(TaskLine(text: taskText, time: taskTime, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, headingLevel: headingLevel))
+            let (recurrence, isCarried, createdDate, dueDate, taskText) = parseRecurrence(line: timeRemainder)
+            return .task(TaskLine(text: taskText, time: taskTime, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, headingLevel: headingLevel))
         } else {
-            let (recurrence, isCarried, createdDate, taskText) = parseRecurrence(line: checkboxRemainder)
-            return .task(TaskLine(text: taskText, time: nil, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, headingLevel: headingLevel))
+            let (recurrence, isCarried, createdDate, dueDate, taskText) = parseRecurrence(line: checkboxRemainder)
+            return .task(TaskLine(text: taskText, time: nil, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, headingLevel: headingLevel))
         }
     }
     
