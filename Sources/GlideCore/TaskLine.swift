@@ -14,6 +14,7 @@ public struct TaskLine {
     public var recurrence: Recurrence
     public var isCarried: Bool
     public var createdDate: Date?
+    public var dueDate: Date?
     public var headingLevel: Int?
     
     public init(
@@ -23,6 +24,7 @@ public struct TaskLine {
         recurrence: Recurrence = .none,
         isCarried: Bool = false,
         createdDate: Date? = nil,
+        dueDate: Date? = nil,
         headingLevel: Int? = nil
     ) {
         self.text = text
@@ -31,6 +33,7 @@ public struct TaskLine {
         self.recurrence = recurrence
         self.isCarried = isCarried
         self.createdDate = createdDate
+        self.dueDate = dueDate
         self.headingLevel = headingLevel
     }
 }
