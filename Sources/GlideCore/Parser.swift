@@ -86,6 +86,8 @@ private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried
         let dateString = String(match.1)
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        formatter.locale = Locale.current
         createdDate = formatter.date(from: dateString)
         remainder = remainder.replacingCharacters(in: match.range, with: "").trimmingCharacters(in: .whitespaces)
     }
@@ -94,6 +96,8 @@ private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried
         let dateString = String(match.1)
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        formatter.locale = Locale.current
         dueDate = formatter.date(from: dateString)
         remainder = remainder.replacingCharacters(in: match.range, with: "").trimmingCharacters(in: .whitespaces)
     }

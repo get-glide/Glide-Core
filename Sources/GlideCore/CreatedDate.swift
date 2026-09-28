@@ -15,8 +15,13 @@ public func needsCreatedDate(line: String) -> Bool {
 }
 
 public func appendCreatedDate(line: String) -> String {
-    let currentDate: String = Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = TimeZone.current
+    
+    let dateString = formatter.string(from: Date())
     var result = line
-    result.append(" @created(\(currentDate))")
+    result.append(" @created(\(dateString))")
+    
     return result
 }

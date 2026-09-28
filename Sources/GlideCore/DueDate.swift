@@ -15,8 +15,14 @@ public func needsDueDate(line: String) -> Bool {
 }
 
 public func appendDueDate(line: String) -> String {
-    let currentDate: String = Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = TimeZone.current
+    formatter.locale = Locale.current
+    
+    let dateString = formatter.string(from: Date())
     var result = line
-    result.append(" @due(\(currentDate))")
+    result.append(" @due(\(dateString))")
+    
     return result
 }
