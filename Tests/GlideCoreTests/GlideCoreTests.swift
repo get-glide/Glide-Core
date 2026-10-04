@@ -126,3 +126,15 @@ import Foundation
     #expect(result.groups.count == 2)
     #expect(result.current != nil)
 }
+
+@Test func deleteNote() throws {
+    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    let store = NoteStore(directory: tempDir)
+    
+    try store.write("hello", to: "TestNote")
+    try store.delete("TestNote")
+    
+    let notes = try store.listNotes()
+    #expect(!notes.contains("TestNote"))
+}

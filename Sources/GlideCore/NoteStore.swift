@@ -27,6 +27,11 @@ public struct NoteStore{
         try contents.write(to: url, atomically: true, encoding: .utf8)
     }
     
+    public func delete(_ name: String) throws {
+        let url = directory.appendingPathComponent("\(name).md")
+        try FileManager.default.removeItem(at: url)
+    }
+    
     public func listNotes() throws -> [String] {
         let files = try FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil)
