@@ -23,7 +23,7 @@ public enum TaskScope {
     case thisMonth
 }
 
-public enum TaskSource {
+public enum TaskSource: Equatable {
     case currentNote(name: String)
     case allNotes
 }
