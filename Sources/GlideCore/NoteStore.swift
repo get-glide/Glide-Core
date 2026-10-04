@@ -27,6 +27,11 @@ public struct NoteStore{
         try contents.write(to: url, atomically: true, encoding: .utf8)
     }
     
+    public func delete(_ name: String) throws {
+        let url = directory.appendingPathComponent("\(name).md")
+        try FileManager.default.removeItem(at: url)
+    }
+    
     public func listNotes() throws -> [String] {
         let files = try FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil)
@@ -49,5 +54,35 @@ public struct NoteStore{
         let glideFolder = documents.appendingPathComponent("Glide", isDirectory: true)
         try FileManager.default.createDirectory(atPath: glideFolder.path, withIntermediateDirectories: true)
         return NoteStore(directory: glideFolder)
+    }
+    
+    public func search(_ query: String) throws -> [SearchResult] {
+        var results: [SearchResult] = []
+        
+        for name in try listNotes(){
+            let contents = try read(name)
+            let lines = contents.split(separator: "\n")
+            
+            for line in lines{
+                if line.lowercased().contains(query.lowercased()){
+                    results.append(SearchResult(noteName: name, line: String(line)))
+                }
+            }
+        }
+        return results
+    }
+    
+    public func runDailyRollover() throws{
+        let todayText = try read(DefaultNote.today.rawValue)
+        let result = sweepCompletedTasks(from: todayText)
+        
+        try write(result.kept, to: DefaultNote.today.rawValue)
+        
+        if !result.archived.isEmpty{
+            let existing = (try? read("Completed Tasks")) ?? ""
+            let newLines = result.archived.joined(separator: "\n")
+            let combined = existing.isEmpty ? newLines : existing + "\n" + newLines
+            try write(combined, to: "Completed Tasks")
+        }
     }
 }

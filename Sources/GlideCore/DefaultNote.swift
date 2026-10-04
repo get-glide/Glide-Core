@@ -11,6 +11,7 @@ public enum DefaultNote: String, CaseIterable {
     case today = "Today"
     case classes = "Classes"
     case projects = "Projects"
+    case completed = "Completed Tasks"
 }
 
 
