@@ -15,6 +15,7 @@ public struct TaskLine {
     public var isCarried: Bool
     public var createdDate: Date?
     public var dueDate: Date?
+    public var hasDueDate: Bool
     public var headingLevel: Int?
     
     public init(
@@ -25,6 +26,7 @@ public struct TaskLine {
         isCarried: Bool = false,
         createdDate: Date? = nil,
         dueDate: Date? = nil,
+        hasDueDate: Bool = false,
         headingLevel: Int? = nil
     ) {
         self.text = text
@@ -34,6 +36,7 @@ public struct TaskLine {
         self.isCarried = isCarried
         self.createdDate = createdDate
         self.dueDate = dueDate
+        self.hasDueDate = hasDueDate
         self.headingLevel = headingLevel
     }
 }

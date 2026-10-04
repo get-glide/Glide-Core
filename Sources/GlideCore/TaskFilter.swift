@@ -125,7 +125,7 @@ public func getTaskPanel(
     scope: TaskScope,
     source: TaskSource,
     store: NoteStore
-) throws -> (groups: [TaskGroup], current: NoteTask?) {
+) throws -> (groups: [TaskGroup], current: NoteTask?, all: [NoteTask]) {
     let all: [NoteTask]
     
     switch source {
@@ -140,5 +140,5 @@ public func getTaskPanel(
     let groups = sortAndGroup(byScope)
     let current = currentTask(from: byScope)
     
-    return (groups, current)
+    return (groups, current, all)
 }
