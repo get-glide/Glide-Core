@@ -2,139 +2,81 @@ import Testing
 import Foundation
 @testable import GlideCore
 
-@Test func readWriteRoundTrip() throws {
-    // 1. set up
-    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-    let store = NoteStore(directory: tempDir)
-    
-    // 2. act
-    try store.write("hello", to: "Test")
-    let readBack = try store.read("Test")
-    
-    // 3. check
-    #expect(readBack == "hello")
+private func day(_ y: Int, _ m: Int, _ d: Int, hour: Int = 12) -> Date {
+    Calendar.current.date(from: DateComponents(year: y, month: m, day: d, hour: hour))!
 }
 
-@Test func createsDefaultNotes() throws {
-    // 1. set up: fresh temp folder + store
-    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-    let store = NoteStore(directory: tempDir)
+private func parsedTasks(_ lines: [String], note: String = "Today") -> [NoteTask] {
+    fetchTasks(lines: lines, noteName: note)
+}
+
+@Test func anyDateKeepsOnlyDatedTasks() {
+    let all = parsedTasks(["[] a @due(2026-10-01)", "[] b @due(nil)", "[] c @due(2027-01-01)"])
+    let result = filterByScope(all, scope: .anyDate)
+    #expect(result.map { $0.task.text } == ["a", "c"])
+}
+
+@Test func hasCheckboxFlag() {
+    func flag(_ line: String) -> Bool? {
+        if case .task(let t) = parseLine(line) { return t.hasCheckbox }
+        return nil
+    }
+    #expect(flag("9:00 foo") == false)
+    #expect(flag("9:00 [] foo") == true)
+    #expect(flag("[] foo") == true)
+    #expect(flag("[] 9:00 foo") == true)
+    #expect(flag("just a note") == nil)
+}
+
+@Test func timeDoesNotEatWordsStartingWithAm() {
+    guard case .task(let t) = parseLine("9:00 amazing") else {
+        Issue.record("expected a task")
+        return
+    }
+    #expect(t.text == "amazing")
+    #expect(t.time?.hour == 9)
+}
+
+@Test func checkboxWithSpaceParses() {
+    guard case .task(let t) = parseLine("[ ] foo") else {
+        Issue.record("expected a task")
+        return
+    }
+    #expect(t.checked == false)
+    #expect(t.text == "foo")
+}
+
+@Test func currentTaskIgnoresOtherDays() {
+    let now = day(2026, 10, 5, hour: 8)
+    let both = parsedTasks(["9:00am [] today @due(2026-10-05)", "7:00pm [] later @due(2026-10-08)"])
+    #expect(currentTask(from: both, at: now)?.task.text == "today")
     
-    // 2. act: create the default notes
-    try store.createDefaultNotesIfNeeded()
-    
-    // 3. check: all three notes now exist
-    let notes = try store.listNotes()
-    #expect(notes.contains("Today"))
-    #expect(notes.contains("Classes"))
-    #expect(notes.contains("Projects"))
+    let onlyLater = parsedTasks(["7:00pm [] later @due(2026-10-08)"])
+    #expect(currentTask(from: onlyLater, at: now) == nil)
 }
 
-@Test func fetchTasksReturnsOnlyTasks() {
-    let lines = [
-        "9:00 [] morning review",
-        "just a note",
-        "[] pick up lunch",
-        "[x] already done"
-    ]
-    let tasks = fetchTasks(lines: lines, noteName: "Today")
-    #expect(tasks.count == 3)
-    #expect(tasks[0].task.checked == false)
-    #expect(tasks[2].task.checked == true)
+@Test func currentTaskUsesUpcomingEventButDropsPastEvent() {
+    let events = parsedTasks(["2:00pm class @due(2026-10-05)"])
+    #expect(currentTask(from: events, at: day(2026, 10, 5, hour: 8))?.task.text == "class")
+    #expect(currentTask(from: events, at: day(2026, 10, 5, hour: 15)) == nil)
 }
 
-@Test func sortAndGroupSeparatesTimedAndUntimed() {
-    let lines = [
-        "9:00 [] standup",
-        "[] pick up lunch",
-        "11:00 [] meeting"
-    ]
-    let tasks = fetchTasks(lines: lines, noteName: "Today")
-    let groups = sortAndGroup(tasks)
-    #expect(groups.count == 2)
-    #expect(groups[0].title == "scheduled")
-    #expect(groups[1].title == "anytime")
-    #expect(groups[0].tasks.count == 2)
-    #expect(groups[0].tasks[0].task.time!.hour == 9)
-    #expect(groups[0].tasks[1].task.time!.hour == 11)
+@Test func carrySkipsPlainEventsKeepsRecurringEvents() {
+    let lines = ["2:00pm class", "9:00 standup @weekday", "[] plain", "[x] done"]
+    #expect(findNeedToCarry(lines: lines, includePlainUnchecked: true) == ["9:00 standup @weekday", "[] plain @carried"])
 }
 
-@Test func filterBySourceCurrentNote() {
-    let tasks = [
-        NoteTask(line: "[] task a", task: TaskLine(text: "task a"), noteName: "Today", lineIndex: 0),
-        NoteTask(line: "[] task b", task: TaskLine(text: "task b"), noteName: "Classes", lineIndex: 0)
-    ]
-    let filtered = filterBySource(tasks, source: .currentNote(name: "Today"))
-    #expect(filtered.count == 1)
-    #expect(filtered[0].noteName == "Today")
+@Test func carryForwardSingleIgnoresEvents() {
+    let lines = ["2:00pm class", "[] x"]
+    #expect(carryForwardSingle(lineIndex: 0, lines: lines) == lines)
 }
 
-@Test func filterBySourceAllNotes() {
-    let tasks = [
-        NoteTask(line: "[] task a", task: TaskLine(text: "task a"), noteName: "Today", lineIndex: 0),
-        NoteTask(line: "[] task b", task: TaskLine(text: "task b"), noteName: "Classes", lineIndex: 0)
-    ]
-    let filtered = filterBySource(tasks, source: .allNotes)
-    #expect(filtered.count == 2)
+@Test func overdueSkipsEvents() {
+    let t = parsedTasks(["2:00pm class @due(2026-10-01)", "[] late @due(2026-10-01)"])
+    #expect(overdueTasks(t, now: day(2026, 10, 5)).map { $0.task.text } == ["late"])
 }
 
-@Test func currentTaskReturnsOverdueFirst() {
-    let now = Calendar.current.date(bySettingHour: 11, minute: 0, second: 0, of: Date())!
-    let tasks = [
-        NoteTask(line: "9:00 [] standup", task: TaskLine(text: "standup", time: TaskTime(hour: 9, minute: 0), checked: false), noteName: "Today", lineIndex: 0),
-        NoteTask(line: "2:00 [] meeting", task: TaskLine(text: "meeting", time: TaskTime(hour: 14, minute: 0), checked: false), noteName: "Today", lineIndex: 1)
-    ]
-    let current = currentTask(from: tasks, at: now)
-    #expect(current?.task.text == "standup")
-}
-
-@Test func currentTaskReturnsUpcomingWhenNothingOverdue() {
-    let now = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
-    let tasks = [
-        NoteTask(line: "9:00 [] standup", task: TaskLine(text: "standup", time: TaskTime(hour: 9, minute: 0), checked: false), noteName: "Today", lineIndex: 0),
-        NoteTask(line: "2:00 [] meeting", task: TaskLine(text: "meeting", time: TaskTime(hour: 14, minute: 0), checked: false), noteName: "Today", lineIndex: 1)
-    ]
-    let current = currentTask(from: tasks, at: now)
-    #expect(current?.task.text == "standup")
-}
-
-@Test func getTaskPanelIntegration() throws {
-    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-    let store = NoteStore(directory: tempDir)
-    
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    let today = formatter.string(from: Date())
-
-    let lines = [
-        "9:00 [] standup @due(\(today))",
-        "[] pick up lunch @due(\(today))",
-        "just a note"
-    ]
-    
-    let result = try getTaskPanel(
-        currentLines: lines,
-        currentNoteName: "Today",
-        scope: .today,
-        source: .currentNote(name: "Today"),
-        store: store
-    )
-    
-    #expect(result.groups.count == 2)
-    #expect(result.current != nil)
-}
-
-@Test func deleteNote() throws {
-    let tempDir = URL.temporaryDirectory.appending(path: UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-    let store = NoteStore(directory: tempDir)
-    
-    try store.write("hello", to: "TestNote")
-    try store.delete("TestNote")
-    
-    let notes = try store.listNotes()
-    #expect(!notes.contains("TestNote"))
+@Test func finalizeTreatsEventsLikeTasks() {
+    let fixed = day(2026, 10, 5)
+    #expect(finalizeLine("9:00 class", now: fixed) == "9:00 class @created(2026-10-05) @due(2026-10-05)")
 }

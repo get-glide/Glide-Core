@@ -21,6 +21,7 @@ public enum TaskScope {
     case today
     case thisWeek
     case thisMonth
+    case anyDate
 }
 
 public enum TaskSource: Equatable {
@@ -55,6 +56,8 @@ public func filterByScope(_ tasks: [NoteTask], scope: TaskScope) -> [NoteTask] {
             guard let due = task.task.dueDate else { return false }
             return Calendar.current.isDate(due, equalTo: Date(), toGranularity: .month)
         }
+    case .anyDate:
+        return tasks.filter { $0.task.dueDate != nil }
     }
 }
 
@@ -86,12 +89,17 @@ public func sortAndGroup(_ tasks: [NoteTask]) -> [TaskGroup] {
 
 public func currentTask(from tasks: [NoteTask], at date: Date = Date()) -> NoteTask? {
     let calendar = Calendar.current
-    let now = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
     
-    let timedUnchecked = tasks.filter { $0.task.time != nil && !$0.task.checked }
+    let dueToday = tasks.filter { task in
+        guard let due = task.task.dueDate else { return false }
+        return calendar.isDate(due, inSameDayAs: date)
+    }
+    
+    let now = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+    let timedUnchecked = dueToday.filter { $0.task.time != nil && !$0.task.checked }
     
     let overdue = timedUnchecked
-        .filter { $0.task.time!.hour * 60 + $0.task.time!.minute <= now }
+        .filter { $0.task.hasCheckbox && $0.task.time!.hour * 60 + $0.task.time!.minute <= now }
         .sorted { $0.task.time!.hour * 60 + $0.task.time!.minute > $1.task.time!.hour * 60 + $1.task.time!.minute }
         .first
     
@@ -104,7 +112,7 @@ public func currentTask(from tasks: [NoteTask], at date: Date = Date()) -> NoteT
     
     if let upcoming = upcoming { return upcoming }
     
-    return tasks.first { $0.task.time == nil && !$0.task.checked }
+    return dueToday.first { $0.task.time == nil && !$0.task.checked }
 }
 
 public func fetchAllTasks(from store: NoteStore) throws -> [NoteTask] {
@@ -141,4 +149,22 @@ public func getTaskPanel(
     let current = currentTask(from: byScope)
     
     return (groups, current, all)
+}
+
+public func overdueTasks(_ tasks: [NoteTask], now: Date = Date()) -> [NoteTask] {
+    let calendar = Calendar.current
+    let startOfToday = calendar.startOfDay(for: now)
+    
+    func sortKey(_ task: NoteTask) -> (Date, Int, String, Int) {
+        let day = calendar.startOfDay(for: task.task.dueDate ?? startOfToday)
+        let minutes = task.task.time.map { $0.hour * 60 + $0.minute } ?? Int.max
+        return (day, minutes, task.noteName, task.lineIndex)
+    }
+    
+    return tasks
+        .filter { task in
+            guard !task.task.checked, task.task.hasCheckbox, let due = task.task.dueDate else { return false }
+            return due < startOfToday
+        }
+        .sorted { sortKey($0) < sortKey($1) }
 }

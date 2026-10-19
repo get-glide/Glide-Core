@@ -17,7 +17,7 @@ public func findNeedToCarry(lines: [String], includePlainUnchecked: Bool) -> [St
             if task.recurrence != .none {
                 result.append(line)
             }
-            else if includePlainUnchecked && !task.checked && !task.isCarried {
+            else if includePlainUnchecked && !task.checked && !task.isCarried && task.hasCheckbox {
                 result.append(line + " @carried")
             }
         }
@@ -67,7 +67,7 @@ public func carryForwardSingle(lineIndex: Int, lines: [String]) -> [String] {
     let line = result[lineIndex]
     let parsed = parseLine(line)
     
-    guard case .task(let task) = parsed, !task.checked else { return lines }
+    guard case .task(let task) = parsed, !task.checked, task.hasCheckbox else { return lines }
     
     result.remove(at: lineIndex)
     

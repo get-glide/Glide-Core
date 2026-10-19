@@ -17,6 +17,7 @@ public struct TaskLine {
     public var dueDate: Date?
     public var hasDueDate: Bool
     public var headingLevel: Int?
+    public var hasCheckbox: Bool
     
     public init(
         text: String,
@@ -27,7 +28,8 @@ public struct TaskLine {
         createdDate: Date? = nil,
         dueDate: Date? = nil,
         hasDueDate: Bool = false,
-        headingLevel: Int? = nil
+        headingLevel: Int? = nil,
+        hasCheckbox: Bool = true
     ) {
         self.text = text
         self.time = time
@@ -38,5 +40,6 @@ public struct TaskLine {
         self.dueDate = dueDate
         self.hasDueDate = hasDueDate
         self.headingLevel = headingLevel
+        self.hasCheckbox = hasCheckbox
     }
 }

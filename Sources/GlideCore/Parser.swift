@@ -1,7 +1,7 @@
 import Foundation
 
 private func parseTime(line: String) -> (time: TaskTime, remainder: String)? {
-    let timeRegex = /^(\d{1,2}):(\d{2})\s*(am|pm)?/.ignoresCase()
+    let timeRegex = /^(\d{1,2}):(\d{2})\s*(?:(am|pm)\b)?/.ignoresCase()
     
     guard let match = line.firstMatch(of: timeRegex) else {return nil}
     guard var hour = Int(match.1), let minute = Int(match.2) else {return nil}
@@ -23,7 +23,7 @@ private func parseTime(line: String) -> (time: TaskTime, remainder: String)? {
 
 private func parseCheckbox(line: String) -> (checked: Bool, remainder: String)? {
     let checkedRegex = /^\[x\]/.ignoresCase()
-    let uncheckedRegex = /^\[\]/
+    let uncheckedRegex = /^\[ ?\]/
     
     if let checkedMatch = line.firstMatch(of: checkedRegex) {
         let remaining = String(line[checkedMatch.range.upperBound...])
@@ -86,10 +86,7 @@ private func parseRecurrence(line: String) -> (recurrence: Recurrence, isCarried
     
     if let match = remainder.firstMatch(of: createdDateRegex) {
         let dateString = String(match.1)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        formatter.locale = Locale.current
+        let formatter = makeTagDateFormatter()
         createdDate = formatter.date(from: dateString)
         remainder = remainder.replacingCharacters(in: match.range, with: "").trimmingCharacters(in: .whitespaces)
     }
@@ -134,7 +131,7 @@ public func parseLine(_ line: String) -> ParsedLine {
             return .task(TaskLine(text: taskText, time: taskTime, checked: checked, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, hasDueDate: hasDueDate, headingLevel: headingLevel))
         } else {
             let (recurrence, isCarried, createdDate, dueDate, hasDueDate, taskText) = parseRecurrence(line: timeRemainder)
-            return .task(TaskLine(text: taskText, time: taskTime, checked: false, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, hasDueDate: hasDueDate, headingLevel: headingLevel))
+            return .task(TaskLine(text: taskText, time: taskTime, checked: false, recurrence: recurrence, isCarried: isCarried, createdDate: createdDate, dueDate: dueDate, hasDueDate: hasDueDate, headingLevel: headingLevel, hasCheckbox: false))
         }
     }
     
